@@ -14,6 +14,8 @@ fi
 # Run the new container
 docker run --name $CONTAINER_NAME \
   -e DATABASE_URI="mysql+pymysql://user:password@host.docker.internal:13316/photo_app" \
+  -e USERNAME="user" \
+  -e UPASSWORD="password" \
   -v /Users/teriri/WIP_CODE/CSC184/PhotoApp/Photo:/Photos \
   -p 15381:15381 \
   junyu07/ecopix_docker:latest
