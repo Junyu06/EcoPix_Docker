@@ -1,15 +1,19 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from app.db import init_db
+from app.indexer import init_indexer
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object("app.config.Config")
-    db.init_app(app)
+    
+    # Initialize the database
+    init_db(app)
+    
+    # Initialize the photo indexer
+    init_indexer(app)
 
-    with app.app_context():
-        from app import routes
-        db.create_all()  # Create database tables if not exist
+    @app.route("/")
+    def home():
+        return "Hello, EcoPix Docker!"
 
     return app
