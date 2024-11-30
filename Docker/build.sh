@@ -1,0 +1,1 @@
+docker buildx build --platform linux/amd64,linux/arm64 -t junyu07/ecopix_docker:latest --load .
