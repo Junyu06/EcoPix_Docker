@@ -15,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 Session(app)
 
+db.init_app(app)
 
 # Register the Blueprint
 app.register_blueprint(routes)

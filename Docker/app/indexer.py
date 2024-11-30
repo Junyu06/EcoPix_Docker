@@ -32,7 +32,7 @@ class PhotoIndexer:
         # Fallback to file modification time
         return datetime.fromtimestamp(os.path.getmtime(image_path))
 
-    def get_exif(image_path):
+    def get_exif(self, image_path):
         image = Image.open(image_path)
         exif_data = image._getexif()
         if not exif_data:
@@ -43,7 +43,7 @@ class PhotoIndexer:
         }
     
     #convert gps info
-    def get_decimal_from_dms(dms, ref):
+    def get_decimal_from_dms(self, dms, ref):
         degrees = dms[0]
         minutes = dms[1]
         seconds = dms[2]
@@ -52,7 +52,7 @@ class PhotoIndexer:
             decimal = -decimal
         return decimal
 
-    def get_gps_data(exif_data):
+    def get_gps_data(self, exif_data):
         if 'GPSInfo' not in exif_data:
             return None
         gps_info = exif_data['GPSInfo']
@@ -63,12 +63,12 @@ class PhotoIndexer:
 
         # Extract latitude and longitude
         if 'GPSLatitude' in gps_data and 'GPSLongitude' in gps_data:
-            lat = get_decimal_from_dms(gps_data['GPSLatitude'], gps_data['GPSLatitudeRef'])
-            lon = get_decimal_from_dms(gps_data['GPSLongitude'], gps_data['GPSLongitudeRef'])
+            lat = self.get_decimal_from_dms(gps_data['GPSLatitude'], gps_data['GPSLatitudeRef'])
+            lon = self.get_decimal_from_dms(gps_data['GPSLongitude'], gps_data['GPSLongitudeRef'])
             return {"latitude": lat, "longitude": lon}
         return None
 
-    def get_camera_details(exif_data):
+    def get_camera_details(self, exif_data):
     #"""Extract camera-related details from EXIF data."""
         if not exif_data:
             return None
