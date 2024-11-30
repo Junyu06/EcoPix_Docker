@@ -12,3 +12,9 @@ docker run --name flask-backend \
   -e DATABASE_NAME=photo_app \
   -p 5000:5000 \
   -d flask-backend
+
+
+  in mariadb
+  mariadb -u user -p
+  USE photo_app
+  SHOW TABLES;
