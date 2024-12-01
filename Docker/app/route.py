@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, make_response, session
 from flask_session import Session
 from app.indexer import PhotoIndexer
+from app.photolist import get_photo_list
 import os
 
 # Create a Blueprint for the routes
@@ -60,4 +61,8 @@ def index():
             return jsonify({"message": "Indexing failed", "error": str(e)}), 500
     else:
         return jsonify({"message": "Unauthorized access."}), 401
+    
+@routes.route('/photo/list', methods=['GET'])
+def photo_list():
+    return get_photo_list
 
