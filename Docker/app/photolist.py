@@ -32,12 +32,15 @@ def get_photo_list():
             {
                 "id": photo.id,
                 "filename": photo.filename,
-                "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",  # Hosted URL
-                "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",  # Hosted URL
+                "filepath": photo.filepath,
+                "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}" if photo.thumbnail_path else None,  # Hosted URL
+                "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}" if photo.filepath else None,  # Hosted URL
                 "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
                 "gps_latitude": photo.gps_latitude,
                 "gps_longitude": photo.gps_longitude,
                 "camera_model": photo.camera_model,
+                "focal_length": photo.focal_length,
+                "lens_model": photo.lens_model,
             }
             for photo in paginated_photos.items
         ]
