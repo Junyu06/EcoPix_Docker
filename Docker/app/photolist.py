@@ -3,15 +3,11 @@ from sqlalchemy import desc, func
 from app.db import Photo
 
 def get_photo_list():
-    """
-    Logic for the /photo/list route.
-    Returns a list of photos with optional ordering and pagination.
-    """
     try:
         # Query parameters
-        order = request.args.get('order', 'new-to-old').lower()  # Default to 'new-to-old'
-        page = int(request.args.get('page', 1))  # Default to page 1
-        per_page = int(request.args.get('per_page', 20))  # Default to 20 photos per page
+        order = request.args.get('order', 'new-to-old').lower()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
 
         # Base query
         query = Photo.query
@@ -36,7 +32,8 @@ def get_photo_list():
             {
                 "id": photo.id,
                 "filename": photo.filename,
-                "thumbnail_path": photo.thumbnail_path,
+                "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",  # Hosted URL
+                "photo_url": f"/pic/photos/{photo.filepath.split('/')[-1]}",  # Hosted URL
                 "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
                 "gps_latitude": photo.gps_latitude,
                 "gps_longitude": photo.gps_longitude,
@@ -48,10 +45,10 @@ def get_photo_list():
         # Return JSON response
         return jsonify({
             "photos": photo_list,
-            "total": paginated_photos.total,  # Total number of photos
-            "page": paginated_photos.page,   # Current page
-            "pages": paginated_photos.pages, # Total number of pages
-            "per_page": paginated_photos.per_page,  # Number of photos per page
+            "total": paginated_photos.total,
+            "page": paginated_photos.page,
+            "pages": paginated_photos.pages,
+            "per_page": paginated_photos.per_page,
         }), 200
 
     except Exception as e:
