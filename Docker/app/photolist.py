@@ -1,13 +1,22 @@
-from flask import jsonfify, request, currrent_app
+from flask import request, current_app, jsonify, session
 from sqlalchemy import desc, func
 from app.db import Photo
 
 def get_photo_list():
-    #logic for the /photo.list route
-    #returns a list of photos with optional oredering
+    """
+    Logic for the /photo/list route.
+    Returns a list of photos with optional ordering and pagination.
+    """
     try:
-        order = request.args.get('order','new-two-old').lower() # default to 'new-to-old'
-        query = Photo.query 
+        # Query parameters
+        order = request.args.get('order', 'new-to-old').lower()  # Default to 'new-to-old'
+        page = int(request.args.get('page', 1))  # Default to page 1
+        per_page = int(request.args.get('per_page', 20))  # Default to 20 photos per page
+
+        # Base query
+        query = Photo.query
+
+        # Apply ordering
         if order == 'new-to-old':
             query = query.order_by(desc(Photo.creation_date))
         elif order == 'old-to-new':
@@ -19,21 +28,32 @@ def get_photo_list():
         elif order == 'random':
             query = query.order_by(func.random())
 
-        photos = query.all()
+        # Apply pagination
+        paginated_photos = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Format response
         photo_list = [
             {
                 "id": photo.id,
                 "filename": photo.filename,
                 "thumbnail_path": photo.thumbnail_path,
-                "creation_date": photo.creation_date.isoformate() if photo.creation_date else None,
+                "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
                 "gps_latitude": photo.gps_latitude,
                 "gps_longitude": photo.gps_longitude,
-                "camera_model": photo.camera_model, 
+                "camera_model": photo.camera_model,
             }
-            for photo in photos
+            for photo in paginated_photos.items
         ]
 
-        return jsonfify(photo_list),200
+        # Return JSON response
+        return jsonify({
+            "photos": photo_list,
+            "total": paginated_photos.total,  # Total number of photos
+            "page": paginated_photos.page,   # Current page
+            "pages": paginated_photos.pages, # Total number of pages
+            "per_page": paginated_photos.per_page,  # Number of photos per page
+        }), 200
+
     except Exception as e:
-        currrent_app.logger.error(f"Error in /photo/list: {str(e)}")
-        return jsonfify({"message":"An error occurred while fetching the photo list.", "error":str(e)}),500
+        current_app.logger.error(f"Error in /photo/list: {str(e)}")
+        return jsonify({"message": "An error occurred while fetching the photo list.", "error": str(e)}), 500
