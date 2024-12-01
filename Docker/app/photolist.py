@@ -33,7 +33,7 @@ def get_photo_list():
                 "id": photo.id,
                 "filename": photo.filename,
                 "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",  # Hosted URL
-                "photo_url": f"/pic/photos/{photo.filepath.split('/')[-1]}",  # Hosted URL
+                "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",  # Hosted URL
                 "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
                 "gps_latitude": photo.gps_latitude,
                 "gps_longitude": photo.gps_longitude,

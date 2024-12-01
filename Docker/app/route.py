@@ -68,7 +68,9 @@ def index():
 @routes.route('/photo/list', methods=['GET'])
 def photo_list():
     if 'username' in session:
-        return get_photo_list()
+        stuff = get_photo_list()
+        print(stuff)
+        return stuff
     else:
         #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
