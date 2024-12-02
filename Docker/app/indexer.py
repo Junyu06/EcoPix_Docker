@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from PIL import Image
+from PIL import Image, ExifTags
 from PIL.ExifTags import TAGS, GPSTAGS
 import piexif
 from app.db import db, Photo
@@ -95,12 +95,31 @@ class PhotoIndexer:
         return camera_details
     
     #generate thunbnail
+    from PIL import Image, ExifTags
+
     def generate_thumbnail(self, image_path):
         try:
             filename = os.path.basename(image_path)
             thumbnail_path = os.path.join(self.thumbnail_dir, f"thumb_{filename}")
             
             with Image.open(image_path) as img:
+                # Correct orientation using EXIF data
+                try:
+                    for orientation in ExifTags.TAGS.keys():
+                        if ExifTags.TAGS[orientation] == 'Orientation':
+                            break
+                    exif = img._getexif()
+                    if exif and orientation in exif:
+                        orientation_value = exif[orientation]
+                        if orientation_value == 3:
+                            img = img.rotate(180, expand=True)
+                        elif orientation_value == 6:
+                            img = img.rotate(270, expand=True)
+                        elif orientation_value == 8:
+                            img = img.rotate(90, expand=True)
+                except Exception as e:
+                    logging.warning(f"Could not correct orientation for {image_path}: {e}")
+                
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'P'):
                     img = img.convert('RGB')
@@ -111,8 +130,9 @@ class PhotoIndexer:
             
             return thumbnail_path
         except Exception as e:
-            logging.error(f"Failed to generate thumbnail for {image_path}: {str(e)}")
+            logging.error(f"Failed to generate thumbnail for {image_path}: {e}")
             return None
+
     
     #index photos
     def index_photos(self):
