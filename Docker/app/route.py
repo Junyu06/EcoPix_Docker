@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify, make_response, session, send_from_directory, current_app
 from flask_session import Session
 from app.indexer import PhotoIndexer
-from app.photolist import get_photo_list, get_album_photo_list, get_album_action, add_delete_from_album
+from app.photolist import get_photo_list, get_album_photo_list, get_album_action, add_delete_from_album, get_exif
 from sqlalchemy import desc, func
 from app.db import db, Album, Photo
 from datetime import datetime
@@ -232,3 +232,14 @@ def add_delete_phto_in_album():
     else:
         return jsonify({"message": "Unauthorized"}), 401
 
+@routes.route('/photoexif', methods=['GET'])
+def get_photo_exif():
+    if 'username' in session:
+        try:
+            response = get_exif()
+            return response
+        except Exception as e:
+            current_app.logger.error(f"Error in /photoexif: {str(e)}")
+            return jsonify({"message": "An error occurred in /photoexif", "error": str(e)}), 500
+    else:
+        return jsonify({"message": "Unauthorized"}), 401

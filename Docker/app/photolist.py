@@ -1,5 +1,5 @@
 from flask import request, current_app, jsonify, session
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from app.db import Photo, Album
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -218,3 +218,122 @@ def add_delete_from_album():
     except Exception as e:
         current_app.logger.error(f"Error in /album/photo/action: {str(e)}")
         return jsonify({"message": "An error occurred while performing the album photo action.", "error": str(e)}), 500
+    
+def get_exif():
+    try:
+        # Query parameters from the request
+        exif_type = request.args.get('exif_type')
+        action = request.args.get('action', 'photo')  # Default to 'photo'
+        value = request.args.get('value')
+        order = request.args.get('order', 'new-to-old').lower()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+
+        # Ensure exif_type is provided
+        if not exif_type:
+            return jsonify({"message": "exif_type is required"}), 400
+
+        if action == 'list':
+            # Return a list of unique values for the given exif_type
+            if exif_type == 'lens':
+                unique_values = db.session.query(Photo.lens_model).distinct().all()
+            elif exif_type == 'camera_model':
+                unique_values = db.session.query(Photo.camera_model).distinct().all()
+            elif exif_type == 'focal_length':
+                unique_values = db.session.query(Photo.focal_length).distinct().all()
+            elif exif_type == 'GPS':
+                unique_values = db.session.query(Photo.gps_latitude, Photo.gps_longitude).distinct().all()
+            else:
+                return jsonify({"message": f"Invalid exif_type: {exif_type}"}), 400
+
+            # Format response
+            formatted_values = [
+                value[0] if len(value) == 1 else value for value in unique_values
+            ]
+            return jsonify({"exif_type": exif_type, "values": formatted_values}), 200
+
+        elif action == 'photo':
+            # Base query
+            query = Photo.query
+
+            # Apply filter based on exif_type and value
+            if exif_type == 'lens':
+                if not value:
+                    return jsonify({"message": "value is required for lens filtering"}), 400
+                query = query.filter(Photo.lens_model.ilike(f"%{value}%"))
+            elif exif_type == 'camera_model':
+                if not value:
+                    return jsonify({"message": "value is required for camera_model filtering"}), 400
+                query = query.filter(Photo.camera_model.ilike(f"%{value}%"))
+            elif exif_type == 'focal_length':
+                if not value:
+                    return jsonify({"message": "value is required for focal_length filtering"}), 400
+                try:
+                    focal_length = float(value)
+                    query = query.filter(Photo.focal_length == focal_length)
+                except ValueError:
+                    return jsonify({"message": "Invalid focal_length value"}), 400
+            elif exif_type == 'GPS':
+                lat = request.args.get('latitude', type=float)
+                lon = request.args.get('longitude', type=float)
+                if lat is not None and lon is not None:
+                    query = query.filter(
+                        (Photo.gps_latitude == lat) & (Photo.gps_longitude == lon)
+                    )
+                else:
+                    return jsonify({"message": "Latitude and Longitude are required for GPS filtering"}), 400
+
+            # Apply ordering
+            if order == 'new-to-old':
+                query = query.order_by(desc(Photo.creation_date))
+            elif order == 'old-to-new':
+                query = query.order_by(Photo.creation_date)
+            elif order == 'a-z':
+                query = query.order_by(Photo.filename)
+            elif order == 'z-a':
+                query = query.order_by(desc(Photo.filename))
+            elif order == 'random':
+                query = query.order_by(func.random())
+
+            # Apply pagination
+            paginated_photos = query.paginate(page=page, per_page=per_page, error_out=False)
+
+            # Format response
+            photo_list = [
+                {
+                    "id": photo.id,
+                    "filename": photo.filename,
+                    "filepath": photo.filepath,
+                    "folderpath": photo.folder_path,
+                    "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}" if photo.thumbnail_path else None,
+                    "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}" if photo.filepath else None,
+                    "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
+                    "gps_latitude": photo.gps_latitude,
+                    "gps_longitude": photo.gps_longitude,
+                    "camera_model": photo.camera_model,
+                    "focal_length": photo.focal_length,
+                    "lens_model": photo.lens_model,
+                    "album": {
+                        "id": photo.album.id,
+                        "name": photo.album.name,
+                        "creation_date": photo.album.creation_date.isoformat()
+                    } if photo.album else None,
+                }
+                for photo in paginated_photos.items
+            ]
+
+            # Return JSON response
+            return jsonify({
+                "photos": photo_list,
+                "total": paginated_photos.total,
+                "page": paginated_photos.page,
+                "pages": paginated_photos.pages,
+                "per_page": paginated_photos.per_page,
+            }), 200
+
+        else:
+            return jsonify({"message": f"Invalid action: {action}"}), 400
+
+    except Exception as e:
+        current_app.logger.error(f"Error in get_exif: {str(e)}")
+        return jsonify({"message": "An error occurred while fetching the photo exif data.", "error": str(e)}), 500
