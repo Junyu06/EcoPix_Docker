@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify, make_response, session, send_from_directory
 from flask_session import Session
 from app.indexer import PhotoIndexer
-from app.photolist import get_photo_list, get_album_photo_list, get_album_action
+from app.photolist import get_photo_list, get_album_photo_list, get_album_action, add_delete_from_album
 from sqlalchemy import desc, func
 from app.db import db, Album, Photo
 import os
@@ -167,12 +167,15 @@ def list_albums():
                 "name": album.name,
                 "description": album.description,
                 "creation_date": album.creation_date.isoformat(),
-                "photo_count": len(album.photos)  # Count photos in the album
+                "photo_count": len(album.photos),  # Count photos in the album
+                "thumbnail_url": (
+                    f"/pic/thumbnail/{album.photos[0].thumbnail_path.split('/')[-1]}"
+                    if album.photos and album.photos[0].thumbnail_path else None
+                ),  # Address of the first photo's thumbnail or None
             }
             for album in albums
         ])
     else:
-        #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
     
 
@@ -180,7 +183,7 @@ def list_albums():
 def list_photos_in_album():
     if 'username' in session:
         stuff = get_album_photo_list()
-        print(stuff)
+        #print(stuff)
         return stuff
     else:
         return jsonify({"message": "Unauthorized"}), 401
@@ -189,7 +192,21 @@ def list_photos_in_album():
 def action_in_album():
     if 'username' in session:
         stuff = get_album_action()
-        print(stuff)
+        #print(stuff)
         return stuff
     else:
         return jsonify({"message": "Unauthorized"}), 401
+    
+@routes.route('/album/adddeletePhoto', methods=['GET', 'POST'])
+def add_delete_phto_in_album():
+    if 'username' in session:
+        try:
+            response = add_delete_from_album()
+            #print(response)  # For logging the response
+            return response
+        except Exception as e:
+            current_app.logger.error(f"Error in /album/adddeletePhoto: {str(e)}")
+            return jsonify({"message": "An error occurred in /album/adddeletePhoto", "error": str(e)}), 500
+    else:
+        return jsonify({"message": "Unauthorized"}), 401
+

@@ -45,7 +45,11 @@ def get_photo_list():
                 "camera_model": photo.camera_model,
                 "focal_length": photo.focal_length,
                 "lens_model": photo.lens_model,
-                "album": photo.album,
+                "album": {
+                    "id": photo.album.id,
+                    "name": photo.album.name,
+                    "creation_date": photo.album.creation_date.isoformat()
+                } if photo.album else None,
             }
             for photo in paginated_photos.items
         ]
@@ -107,7 +111,11 @@ def get_album_photo_list():
                 "camera_model": photo.camera_model,
                 "focal_length": photo.focal_length,
                 "lens_model": photo.lens_model,
-                "album": photo.album_name if photo.album else None,
+                "album": {
+                    "id": photo.album.id,
+                    "name": photo.album.name,  # Correctly access the `name` attribute
+                    "creation_date": photo.album.creation_date.isoformat()
+                } if photo.album else None,
             }
             for photo in paginated_photos.items
         ]
@@ -175,3 +183,38 @@ def get_album_action():
         current_app.logger.error(f"Error in /album/action: {str(e)}")
         return jsonify({"message": "An error occurred while performing the album action.", "error": str(e)}), 500
 
+def add_delete_from_album():
+    try:
+        # Query parameters from the request
+        album_id = request.args.get('album_id', type=int)
+        photo_id = request.args.get('photo_id', type=int)
+
+        # Validate inputs
+        if not album_id or not photo_id:
+            return jsonify({"message": "Both album_id and photo_id are required"}), 400
+
+        # Find the album
+        album = Album.query.get(album_id)
+        if not album:
+            return jsonify({"message": f"Album with id {album_id} not found"}), 404
+
+        # Find the photo
+        photo = Photo.query.get(photo_id)
+        if not photo:
+            return jsonify({"message": f"Photo with id {photo_id} not found"}), 404
+
+        # Check if the photo is already in the album
+        if photo in album.photos:
+            # Remove the photo from the album
+            photo.album_id = None
+            db.session.commit()
+            return jsonify({"message": f"Photo {photo_id} removed from album {album_id}"}), 200
+        else:
+            # Add the photo to the album
+            photo.album_id = album_id
+            db.session.commit()
+            return jsonify({"message": f"Photo {photo_id} added to album {album_id}"}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error in /album/photo/action: {str(e)}")
+        return jsonify({"message": "An error occurred while performing the album photo action.", "error": str(e)}), 500
