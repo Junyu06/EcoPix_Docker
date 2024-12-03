@@ -137,8 +137,8 @@ class PhotoIndexer:
     #index photos
     def index_photos(self):
         """Index all photos in the photos directory"""
-        self.setup_direcotries()  # Fix typo in method name
-        
+        self.setup_direcotries()  # Ensure directories are properly set up
+
         for root, _, files in os.walk(self.photos_dir):
             # Skip thumbnail directory
             if root == self.thumbnail_dir:
@@ -176,17 +176,22 @@ class PhotoIndexer:
                         focal_length = camera_details.get("focal_length") if camera_details else None
                         lens_model = camera_details.get("lens_model") if camera_details else None
                         
+                        # Determine folder path relative to the base photos directory
+                        folder_path = os.path.relpath(root, self.photos_dir)
+                        
                         # Create new photo record
                         new_photo = Photo(
                             filename=filename,
                             filepath=full_path,
+                            folder_path=folder_path,  # Store the relative folder path
                             thumbnail_path=thumbnail_path,
                             creation_date=creation_time,
                             gps_latitude=lat,
                             gps_longitude=lon,
                             camera_model=camera_model,
                             focal_length=focal_length,
-                            lens_model=lens_model
+                            lens_model=lens_model,
+                            album_id=None  # Set to None initially; albums can be assigned later
                         )
                         
                         db.session.add(new_photo)
@@ -196,6 +201,7 @@ class PhotoIndexer:
             
             # Commit after processing each directory to avoid large transactions
             db.session.commit()
+
 
     
     #Initialize the indexer with the Flask app context

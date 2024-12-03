@@ -105,3 +105,95 @@ def serve_photo(filename):
     else:
         #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
+    
+@routes.route('/folders', methods=['GET'])
+def list_subfolders():
+    base_path = request.args.get('path', '/Photos')  # Default to root directory
+    if 'username' in session:
+        try:
+            subfolders = [
+                {"name": name, "path": os.path.join(base_path, name)}
+                for name in os.listdir(base_path)
+                if os.path.isdir(os.path.join(base_path, name))
+            ]
+            return jsonify({"path": base_path, "subfolders": subfolders}), 200
+        except Exception as e:
+            logging.error(f"Error listing subfolders in {base_path}: {str(e)}")
+            return jsonify({"error": "Unable to fetch subfolders", "message": str(e)}), 500
+    else:
+        #print("The session id is")
+        return jsonify({"message": "Unauthorized"}), 401
+
+    
+
+@routes.route('/folders/photos', methods=['GET'])
+def list_photos_in_folder():
+    folder_path = request.args.get('path', '/Photos')  # Default to root directory
+    if 'username' in session:
+        try:
+            photos = Photo.query.filter(Photo.folder_path == folder_path).all()
+            photo_list = [
+                {
+                    "id": photo.id,
+                    "filename": photo.filename,
+                    "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",
+                    "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",
+                    "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
+                    "camera_model": photo.camera_model,
+                    "focal_length": photo.focal_length,
+                    "lens_model": photo.lens_model
+                }
+                for photo in photos
+            ]
+            return jsonify({"path": folder_path, "photos": photo_list}), 200
+        except Exception as e:
+            logging.error(f"Error listing photos in folder {folder_path}: {str(e)}")
+            return jsonify({"error": "Unable to fetch photos", "message": str(e)}), 500
+    else:
+        #print("The session id is")
+        return jsonify({"message": "Unauthorized"}), 401
+
+    
+
+@routes.route('/albums', methods=['GET'])
+def list_albums():
+    if 'username' in session:
+        albums = Album.query.all()
+        return jsonify([
+            {
+                "id": album.id,
+                "name": album.name,
+                "description": album.description,
+                "creation_date": album.creation_date.isoformat(),
+                "photo_count": len(album.photos)  # Count photos in the album
+            }
+            for album in albums
+        ])
+    else:
+        #print("The session id is")
+        return jsonify({"message": "Unauthorized"}), 401
+    
+
+@routes.route('/album/<int:album_id>/photos', methods=['GET'])
+def list_photos_in_album(album_id):
+    if 'username' in session:
+        album = Album.query.get_or_404(album_id)
+        photos = album.photos
+        return jsonify([
+            {
+                "id": photo.id,
+                "filename": photo.filename,
+                "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",
+                "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",
+                "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
+                "camera_model": photo.camera_model,
+                "focal_length": photo.focal_length,
+                "lens_model": photo.lens_model
+            }
+            for photo in photos
+        ])
+    else:
+        #print("The session id is")
+        return jsonify({"message": "Unauthorized"}), 401
+    
+

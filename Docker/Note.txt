@@ -18,3 +18,14 @@ docker run --name flask-backend \
   mariadb -u user -p
   USE photo_app
   SHOW TABLES;
+  DROP TABLE photos;
+
+https://stackoverflow.com/questions/73428658/docker-desktop-not-opening-on-mac
+  I had the same problem. I killed 'Docker' processes and restart Docker Desktop. I get back Docker Desktop launched.
+
+  Open 'Activities Monitor'
+  Filter processes listed on 'docker'keyword
+  Note the PID of the 2 'Docker' processes
+  From a terminal, kill those 2 processes : kill pid or kill -9 pid
+  Run Docker app
+  It should work.

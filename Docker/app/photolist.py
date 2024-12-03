@@ -33,6 +33,7 @@ def get_photo_list():
                 "id": photo.id,
                 "filename": photo.filename,
                 "filepath": photo.filepath,
+                "folderpath": photo.folder_path,
                 "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}" if photo.thumbnail_path else None,  # Hosted URL
                 "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}" if photo.filepath else None,  # Hosted URL
                 "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
@@ -41,6 +42,7 @@ def get_photo_list():
                 "camera_model": photo.camera_model,
                 "focal_length": photo.focal_length,
                 "lens_model": photo.lens_model,
+                "album": photo.album,
             }
             for photo in paginated_photos.items
         ]
