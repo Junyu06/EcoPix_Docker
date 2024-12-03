@@ -5,6 +5,7 @@ from app.indexer import PhotoIndexer
 from app.photolist import get_photo_list, get_album_photo_list, get_album_action, add_delete_from_album
 from sqlalchemy import desc, func
 from app.db import db, Album, Photo
+from datetime import datetime
 import os
 
 
@@ -120,11 +121,18 @@ def list_subfolders():
             if not os.path.exists(base_path) or not os.path.isdir(base_path):
                 return jsonify({"error": "Invalid directory"}), 400
 
-            subfolders = [
-                {"name": name, "path": os.path.join(base_path, name)}
-                for name in os.listdir(base_path)
-                if os.path.isdir(os.path.join(base_path, name))
-            ]
+            subfolders = []
+            for name in os.listdir(base_path):
+                folder_path = os.path.join(base_path, name)
+                if os.path.isdir(folder_path):
+                    # Get the creation date of the folder
+                    creation_date = datetime.fromtimestamp(os.path.getctime(folder_path)).isoformat()
+                    subfolders.append({
+                        "name": name,
+                        "path": folder_path,
+                        "creation_date": creation_date
+                    })
+
             return jsonify({"path": base_path, "subfolders": subfolders}), 200
         except Exception as e:
             current_app.logger.error(f"Error listing subfolders in {base_path}: {str(e)}")
