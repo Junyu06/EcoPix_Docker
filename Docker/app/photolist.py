@@ -1,6 +1,9 @@
 from flask import request, current_app, jsonify, session
 from sqlalchemy import desc, func
-from app.db import Photo
+from app.db import Photo, Album
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+from app.db import db, Album, Photo
 
 def get_photo_list():
     try:
@@ -121,3 +124,54 @@ def get_album_photo_list():
     except Exception as e:
         current_app.logger.error(f"Error in /photo/list: {str(e)}")
         return jsonify({"message": "An error occurred while fetching the photo list.", "error": str(e)}), 500
+
+def get_album_action():
+    try:
+        # Query parameters
+        album_action = request.args.get('action')
+        album_id = request.args.get('album_id', type=int)
+        album_name = request.args.get('album_name')
+
+        # Ensure album_action is provided
+        if not album_action:
+            return jsonify({"message": "album_action is required"}), 400
+
+        # Handle 'add' action
+        if album_action.lower() == 'add':
+            if not album_name:
+                return jsonify({"message": "album_name is required for 'add' action"}), 400
+            
+            # Check if an album with the same name already exists
+            existing_album = Album.query.filter_by(name=album_name).first()
+            if existing_album:
+                return jsonify({"message": f"Album with name '{album_name}' already exists"}), 400
+            
+            # Create and add a new album
+            new_album = Album(name=album_name)
+            db.session.add(new_album)
+            db.session.commit()
+            return jsonify({"message": f"Album '{album_name}' added successfully", "album_id": new_album.id}), 200
+
+        # Handle 'delete' action
+        elif album_action.lower() == 'delete':
+            if not album_id:
+                return jsonify({"message": "album_id is required for 'delete' action"}), 400
+            
+            # Find the album by ID
+            album = Album.query.get(album_id)
+            if not album:
+                return jsonify({"message": f"Album with ID '{album_id}' not found"}), 404
+
+            # Delete the album
+            db.session.delete(album)
+            db.session.commit()
+            return jsonify({"message": f"Album with ID '{album_id}' deleted successfully"}), 200
+
+        # Invalid action
+        else:
+            return jsonify({"message": "Invalid album_action. Use 'add' or 'delete'"}), 400
+
+    except Exception as e:
+        current_app.logger.error(f"Error in /album/action: {str(e)}")
+        return jsonify({"message": "An error occurred while performing the album action.", "error": str(e)}), 500
+

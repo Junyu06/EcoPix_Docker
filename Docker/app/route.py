@@ -2,7 +2,9 @@
 from flask import Blueprint, request, jsonify, make_response, session, send_from_directory
 from flask_session import Session
 from app.indexer import PhotoIndexer
-from app.photolist import get_photo_list, get_album_photo_list
+from app.photolist import get_photo_list, get_album_photo_list, get_album_action
+from sqlalchemy import desc, func
+from app.db import db, Album, Photo
 import os
 
 # Create a Blueprint for the routes
@@ -175,31 +177,19 @@ def list_albums():
     
 
 @routes.route('/album/photos', methods=['GET'])
-def list_photos_in_album(album_id):
+def list_photos_in_album():
     if 'username' in session:
         stuff = get_album_photo_list()
         print(stuff)
         return stuff
     else:
         return jsonify({"message": "Unauthorized"}), 401
-    # if 'username' in session:
-    #     album = Album.query.get_or_404(album_id)
-    #     photos = album.photos
-    #     return jsonify([
-    #         {
-    #             "id": photo.id,
-    #             "filename": photo.filename,
-    #             "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",
-    #             "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",
-    #             "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
-    #             "camera_model": photo.camera_model,
-    #             "focal_length": photo.focal_length,
-    #             "lens_model": photo.lens_model
-    #         }
-    #         for photo in photos
-    #     ])
-    # else:
-    #     #print("The session id is")
-    #     return jsonify({"message": "Unauthorized"}), 401
-    
 
+@routes.route('/album/action', methods=['GET'])
+def action_in_album():
+    if 'username' in session:
+        stuff = get_album_action()
+        print(stuff)
+        return stuff
+    else:
+        return jsonify({"message": "Unauthorized"}), 401
