@@ -177,7 +177,7 @@ class PhotoIndexer:
                         lens_model = camera_details.get("lens_model") if camera_details else None
                         
                         # Determine folder path relative to the base photos directory
-                        folder_path = os.path.relpath(root, self.photos_dir)
+                        folder_path = f"/Photos/{os.path.relpath(root, self.photos_dir)}"
                         
                         # Create new photo record
                         new_photo = Photo(

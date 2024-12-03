@@ -1,11 +1,12 @@
 # route.py
-from flask import Blueprint, request, jsonify, make_response, session, send_from_directory
+from flask import Blueprint, request, jsonify, make_response, session, send_from_directory, current_app
 from flask_session import Session
 from app.indexer import PhotoIndexer
 from app.photolist import get_photo_list, get_album_photo_list, get_album_action, add_delete_from_album
 from sqlalchemy import desc, func
 from app.db import db, Album, Photo
 import os
+
 
 # Create a Blueprint for the routes
 routes = Blueprint('routes', __name__)
@@ -108,11 +109,17 @@ def serve_photo(filename):
         #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
     
+
 @routes.route('/folders', methods=['GET'])
 def list_subfolders():
-    base_path = request.args.get('path', '/Photos')  # Default to root directory
+    base_path = request.args.get('path', '/Photos').rstrip('/')  # Default to '/Photos', strip trailing slash
+
     if 'username' in session:
         try:
+            # Ensure the path is valid and inside the allowed base directory
+            if not os.path.exists(base_path) or not os.path.isdir(base_path):
+                return jsonify({"error": "Invalid directory"}), 400
+
             subfolders = [
                 {"name": name, "path": os.path.join(base_path, name)}
                 for name in os.listdir(base_path)
@@ -120,40 +127,47 @@ def list_subfolders():
             ]
             return jsonify({"path": base_path, "subfolders": subfolders}), 200
         except Exception as e:
-            logging.error(f"Error listing subfolders in {base_path}: {str(e)}")
+            current_app.logger.error(f"Error listing subfolders in {base_path}: {str(e)}")
             return jsonify({"error": "Unable to fetch subfolders", "message": str(e)}), 500
     else:
-        #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
+
 
     
 
 @routes.route('/folders/photos', methods=['GET'])
 def list_photos_in_folder():
-    folder_path = request.args.get('path', '/Photos')  # Default to root directory
+    folder_path = request.args.get('path', '/Photos').rstrip('/')  # Default to '/Photos', strip trailing slash
+
     if 'username' in session:
         try:
+            # Ensure the folder path is valid
+            if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+                return jsonify({"error": "Invalid folder path"}), 400
+
+            # Query photos in the folder #must in the folder else would work
             photos = Photo.query.filter(Photo.folder_path == folder_path).all()
+            current_app.logger.error(f"phto.folder_path: {str(folder_path.split('/')[-1])}")
             photo_list = [
                 {
                     "id": photo.id,
                     "filename": photo.filename,
-                    "thumbnail_url": f"/pic/thumbnail/{photo.thumbnail_path.split('/')[-1]}",
-                    "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}",
+                    "thumbnail_url": f"/pic/thumbnail/{os.path.basename(photo.thumbnail_path)}" if photo.thumbnail_path else None,
+                    "photo_url": f"/pic/photos/{photo.filepath.replace('/Photos/', '')}" if photo.filepath else None,
                     "creation_date": photo.creation_date.isoformat() if photo.creation_date else None,
                     "camera_model": photo.camera_model,
                     "focal_length": photo.focal_length,
-                    "lens_model": photo.lens_model
+                    "lens_model": photo.lens_model,
                 }
                 for photo in photos
             ]
             return jsonify({"path": folder_path, "photos": photo_list}), 200
         except Exception as e:
-            logging.error(f"Error listing photos in folder {folder_path}: {str(e)}")
+            current_app.logger.error(f"Error listing photos in folder {folder_path}: {str(e)}")
             return jsonify({"error": "Unable to fetch photos", "message": str(e)}), 500
     else:
-        #print("The session id is")
         return jsonify({"message": "Unauthorized"}), 401
+
 
     
 
