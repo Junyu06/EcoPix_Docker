@@ -3,7 +3,7 @@ from sqlalchemy import desc, func, or_
 from app.db import Photo, Album
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from app.db import db, Album, Photo
+from app.db import db, Album, Photo, GPSCluster
 
 def get_photo_list():
     try:
@@ -242,7 +242,27 @@ def get_exif():
             elif exif_type == 'focal_length':
                 unique_values = db.session.query(Photo.focal_length).distinct().all()
             elif exif_type == 'GPS':
-                unique_values = db.session.query(Photo.gps_latitude, Photo.gps_longitude).distinct().all()
+                clusters = db.session.query(
+                    GPSCluster.id,
+                    GPSCluster.cluster_latitude,
+                    GPSCluster.cluster_longitude,
+                    GPSCluster.photo_count
+                ).all()
+
+                formatted_clusters = [
+                    {
+                        "id": cluster.id,
+                        "cluster_latitude": cluster.cluster_latitude,
+                        "cluster_longitude": cluster.cluster_longitude,
+                        "photo_count": cluster.photo_count,
+                    }
+                    for cluster in clusters
+                ]
+
+                return jsonify({
+                    "exif_type": exif_type,
+                    "clusters": formatted_clusters
+                }), 200
             else:
                 return jsonify({"message": f"Invalid exif_type: {exif_type}"}), 400
 
@@ -274,14 +294,10 @@ def get_exif():
                 except ValueError:
                     return jsonify({"message": "Invalid focal_length value"}), 400
             elif exif_type == 'GPS':
-                lat = request.args.get('latitude', type=float)
-                lon = request.args.get('longitude', type=float)
-                if lat is not None and lon is not None:
-                    query = query.filter(
-                        (Photo.gps_latitude == lat) & (Photo.gps_longitude == lon)
-                    )
+                if not value:
+                    query = query.filter(GPSCluster.all())
                 else:
-                    return jsonify({"message": "Latitude and Longitude are required for GPS filtering"}), 400
+                    return jsonify({"message": "Cluster ID is not required for GPS filtering"}), 400
 
             # Apply ordering
             if order == 'new-to-old':

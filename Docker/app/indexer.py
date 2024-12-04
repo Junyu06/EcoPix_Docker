@@ -3,7 +3,7 @@ from datetime import datetime
 from PIL import Image, ExifTags
 from PIL.ExifTags import TAGS, GPSTAGS
 import piexif
-from app.db import db, Photo
+from app.db import db, Photo, GPSCluster
 import logging
 from flask import current_app
 
@@ -201,7 +201,59 @@ class PhotoIndexer:
             
             # Commit after processing each directory to avoid large transactions
             db.session.commit()
+        #after indexing photos, index gps cluster
+        self.index_gps_clusters()
 
+    def index_gps_clusters(self):
+        """Group photos by GPS coordinates and populate the GPSCluster table."""
+        try:
+            # Clear existing clusters
+            db.session.query(GPSCluster).delete()
+            db.session.commit()
+
+            # Query to group photos by rounded GPS coordinates using SQLAlchemy ORM
+            clusters = (
+                db.session.query(
+                    db.func.round(Photo.gps_latitude, 2).label("cluster_latitude"),
+                    db.func.round(Photo.gps_longitude, 2).label("cluster_longitude"),
+                    db.func.count(Photo.id).label("photo_count")
+                )
+                .filter(Photo.gps_latitude.isnot(None), Photo.gps_longitude.isnot(None))
+                .group_by(
+                    db.func.round(Photo.gps_latitude, 2),
+                    db.func.round(Photo.gps_longitude, 2)
+                )
+                .all()
+            )
+
+            for cluster in clusters:
+                # Create a new GPSCluster
+                gps_cluster = GPSCluster(
+                    cluster_latitude=cluster.cluster_latitude,
+                    cluster_longitude=cluster.cluster_longitude,
+                    photo_count=cluster.photo_count
+                )
+                db.session.add(gps_cluster)
+                db.session.commit()
+
+                # Assign photos to this cluster
+                photos = (
+                    Photo.query.filter(
+                        db.func.round(Photo.gps_latitude, 2) == cluster.cluster_latitude,
+                        db.func.round(Photo.gps_longitude, 2) == cluster.cluster_longitude
+                    ).all()
+                )
+
+                for photo in photos:
+                    photo.gps_cluster_id = gps_cluster.id
+                    db.session.add(photo)  # Add the updated photo record to the session
+
+            db.session.commit()
+
+            print("GPS clusters indexed successfully.")
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error indexing GPS clusters: {e}")
 
     
     #Initialize the indexer with the Flask app context
