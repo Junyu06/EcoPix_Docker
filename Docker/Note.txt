@@ -20,6 +20,8 @@ docker run --name flask-backend \
   SHOW TABLES;
   DROP TABLE photos;
 
+   mariadb-dump -u user -ppassword photo_app > ./schema.sql
+
 https://stackoverflow.com/questions/73428658/docker-desktop-not-opening-on-mac
   I had the same problem. I killed 'Docker' processes and restart Docker Desktop. I get back Docker Desktop launched.
 
