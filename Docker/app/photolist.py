@@ -295,9 +295,13 @@ def get_exif():
                     return jsonify({"message": "Invalid focal_length value"}), 400
             elif exif_type == 'GPS':
                 if not value:
-                    query = query.filter(GPSCluster.all())
-                else:
-                    return jsonify({"message": "Cluster ID is not required for GPS filtering"}), 400
+                    return jsonify({"message": "value (cluster_id) is required for GPS filtering"}), 400
+
+                try:
+                    cluster_id = int(value)
+                    query = query.filter(Photo.gps_cluster_id == cluster_id)
+                except ValueError:
+                    return jsonify({"message": "Invalid cluster_id value"}), 400
 
             # Apply ordering
             if order == 'new-to-old':
